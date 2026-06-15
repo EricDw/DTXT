@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +24,7 @@ import com.dewildte.dtxt.commands.LoadSelectedFile
 import com.dewildte.dtxt.commands.LogMessage
 import com.dewildte.dtxt.commands.SelectTextFile
 import com.dewildte.dtxt.commands.UpdateSelectedFileContent
+import com.dewildte.dtxt.content.ContentType
 import com.dewildte.dtxt.data.LogData
 import com.dewildte.dtxt.data.LogLevel
 import com.dewildte.dtxt.data.TextFile
@@ -87,6 +89,10 @@ class MainActivity : ComponentActivity(), Actor {
                 colorScheme = colorScheme,
             ) {
                 App(state = appState, controller = this@MainActivity)
+            }
+
+            BackHandler(enabled = appState.contentType != ContentType.EDITOR) {
+                appState.contentType = ContentType.EDITOR
             }
         }
     }
@@ -178,18 +184,23 @@ class MainActivity : ComponentActivity(), Actor {
             LogLevel.VERBOSE -> {
                 Log.v(TAG, message.message, message.error)
             }
+
             LogLevel.DEBUG -> {
                 Log.d(TAG, message.message, message.error)
             }
+
             LogLevel.INFO -> {
                 Log.i(TAG, message.message, message.error)
             }
+
             LogLevel.WARN -> {
                 Log.w(TAG, message.message, message.error)
             }
+
             LogLevel.ERROR -> {
                 Log.e(TAG, message.message, message.error)
             }
+
             LogLevel.WTF -> {
                 Log.wtf(TAG, message.message, message.error)
             }

@@ -11,21 +11,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.dewildte.dtxt.utils.Actor
-import com.dewildte.dtxt.content.empty.events.SelectTextFileClick
+import dtxt.app.shared.generated.resources.Res
+import dtxt.app.shared.generated.resources.label_select_file
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
-@Preview
 fun EmptyContent(
-    controller: Actor = {},
+    modifier: Modifier = Modifier,
+    onEvent: (EmptyContentEvent) -> Unit = {},
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(
+        modifier = modifier,
+    ) { innerPadding ->
         Box(
-            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            TextButton(onClick = { controller.tell(SelectTextFileClick()) }) {
-                Text("Select .txt File")
+            TextButton(onClick = { onEvent(SelectTextFileClicked) }) {
+                Text(stringResource(Res.string.label_select_file))
             }
         }
     }
+}
+
+@Composable
+@Preview
+private fun EmptyContentPreview() {
+    EmptyContent()
 }

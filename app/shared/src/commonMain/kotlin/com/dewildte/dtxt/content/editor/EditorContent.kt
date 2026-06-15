@@ -1,6 +1,7 @@
 package com.dewildte.dtxt.content.editor
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
@@ -14,13 +15,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.dewildte.dtxt.commands.SelectTextFile
-import com.dewildte.dtxt.components.editor.Editor
-import com.dewildte.dtxt.components.editor.rememberEditorState
 import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.utils.Actor
 import com.dewildte.dtxt.utils.samples.SampleText
 import dtxt.app.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -28,83 +26,19 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun EditorContent(
     modifier: Modifier = Modifier,
-    state: EditorContentState = rememberEditorContentState(),
-    controller: Actor = {},
+    textFile: TextFile = TextFile(),
+    searchMode: Boolean = false,
+    searchTerm: String = "",
+    moreMenuExpanded: Boolean = false,
+    onEvent: (EditorContentEvent) -> Unit = {},
 ) {
-    val editorState = rememberEditorState(state.textFile.contents)
-
     Scaffold(
         modifier = modifier.fillMaxSize().imePadding(),
         topBar = {
-            TopAppBar(
-                title = { Text(state.textFile.path) },
-                actions = {
-                    Box {
-                        IconButton(onClick = { state.moreMenuExpanded = !state.moreMenuExpanded }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(
-                            expanded = state.moreMenuExpanded,
-                            onDismissRequest = { state.moreMenuExpanded = !state.moreMenuExpanded },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.label_select_file)) },
-                                onClick = {
-                                    state.moreMenuExpanded = !state.moreMenuExpanded
-                                    controller.tell(SelectTextFile())
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.FileOpen,
-                                        contentDescription = stringResource(Res.string.desc_select_file)
-                                    )
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.label_insert_snippet)) },
-                                onClick = {
-                                    state.moreMenuExpanded = !state.moreMenuExpanded
-                                    // TODO: Open snippet selector
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Default.TextSnippet,
-                                        contentDescription = stringResource(Res.string.desc_insert_snippet)
-                                    )
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.label_find_in_page)) },
-                                onClick = {
-                                    state.moreMenuExpanded = !state.moreMenuExpanded
-                                    state.searchMode = !state.searchMode
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.FindInPage,
-                                        contentDescription = stringResource(Res.string.desc_find_in_page)
-                                    )
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.label_settings)) },
-                                onClick = {
-                                    state.moreMenuExpanded = !state.moreMenuExpanded
-                                    // TODO: Navigate to settings
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = stringResource(Res.string.desc_settings)
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
+            TopBar(
+                textFile = textFile,
+                moreMenuExpanded = moreMenuExpanded,
+                onEvent = onEvent,
             )
         },
     ) { innerPadding ->
@@ -113,9 +47,9 @@ fun EditorContent(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            if (state.searchMode) {
+            if (searchMode) {
                 val searchTermFieldState = rememberTextFieldState(
-                    state.searchTerm
+                    searchTerm
                 )
                 OutlinedTextField(
                     state = searchTermFieldState,
@@ -130,18 +64,28 @@ fun EditorContent(
 
                 LaunchedEffect(searchTermFieldState) {
                     searchTermFlow.collect {
-                        state.searchTerm = it.toString()
+                        onEvent(SearchTermChanged(it.toString()))
                     }
                 }
             }
 
-            Editor(
-                modifier = Modifier.weight(1F)
-                    .padding(8.dp),
-                state = editorState,
-            ) { event ->
-                when (event) {
-                    else -> controller.tell(event)
+            val textFieldState = rememberTextFieldState(
+                initialText = textFile.contents,
+            )
+            BasicTextField(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxSize(),
+                state = textFieldState,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+            )
+
+            val textFlow = snapshotFlow { textFieldState.text }
+
+            LaunchedEffect(onEvent) {
+                textFlow.collect { newText ->
+                    onEvent(FileTextChanged(newText.toString()))
                 }
             }
         }
@@ -149,17 +93,95 @@ fun EditorContent(
 }
 
 @Composable
+private fun TopBar(
+    textFile: TextFile,
+    moreMenuExpanded: Boolean,
+    onEvent: (EditorContentEvent) -> Unit,
+) {
+    TopAppBar(
+        title = { Text(textFile.path) },
+        actions = {
+            Box {
+                IconButton(
+                    onClick = {
+                        onEvent(MoreMenuClicked)
+                    },
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                }
+                DropdownMenu(
+                    expanded = moreMenuExpanded,
+                    onDismissRequest = {
+                        onEvent(MoreMenuDismissRequested)
+                    },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.label_select_file)) },
+                        onClick = {
+                            onEvent(SelectFileClicked)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.FileOpen,
+                                contentDescription = stringResource(Res.string.desc_select_file)
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.label_insert_snippet)) },
+                        onClick = {
+                            onEvent(InsertSnippetClicked)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Default.TextSnippet,
+                                contentDescription = stringResource(Res.string.desc_insert_snippet)
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.label_find_in_page)) },
+                        onClick = {
+                            onEvent(FindInPageClicked)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.FindInPage,
+                                contentDescription = stringResource(Res.string.desc_find_in_page)
+                            )
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.label_settings)) },
+                        onClick = {
+                            onEvent(SettingsClicked)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(Res.string.desc_settings)
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
 @Preview(showBackground = true)
 private fun EditorContentPreview() {
-    val editorState = EditorContentState(
+    EditorContent(
+        modifier = Modifier.fillMaxSize(),
         textFile = TextFile(
             path = SampleText.textFileName,
             contents = SampleText.loremIpsum
         ),
-        contextMenuExpanded = true,
-    )
-    EditorContent(
-        modifier = Modifier.fillMaxSize(),
-        state = editorState,
+        searchTerm = "",
+        moreMenuExpanded = true,
     )
 }

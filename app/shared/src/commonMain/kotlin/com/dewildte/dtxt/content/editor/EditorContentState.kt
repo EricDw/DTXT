@@ -13,7 +13,7 @@ class EditorContentState(
     textFile: TextFile = TextFile(),
     searchMode: Boolean = false,
     searchTerm: String = "",
-    contextMenuExpanded: Boolean = false,
+    moreMenuExpanded: Boolean = false,
 ) {
     var textFile: TextFile by mutableStateOf(textFile)
 
@@ -21,16 +21,22 @@ class EditorContentState(
 
     var searchTerm: String by mutableStateOf(searchTerm)
 
-    var moreMenuExpanded: Boolean by mutableStateOf(contextMenuExpanded)
+    var moreMenuExpanded: Boolean by mutableStateOf(moreMenuExpanded)
 }
 
 @Composable
 fun rememberEditorContentState(
     textFile: TextFile = TextFile(),
+    searchMode: Boolean = false,
+    searchTerm: String = "",
+    contextMenuExpanded: Boolean = false,
 ): EditorContentState {
     return remember {
         EditorContentState(
-            textFile = textFile,
+            textFile,
+            searchMode,
+            searchTerm,
+            contextMenuExpanded
         )
     }
 }
