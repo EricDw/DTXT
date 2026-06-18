@@ -27,7 +27,7 @@ fun SettingsContent(
     onEvent: (SettingsContentEvent) -> Unit = {}
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
@@ -60,7 +60,5 @@ fun SettingsContent(
 @Composable
 @Preview
 private fun SettingsContentPreview() {
-    SettingsContent(
-        modifier = Modifier.fillMaxSize()
-    )
+    SettingsContent()
 }

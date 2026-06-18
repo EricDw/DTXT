@@ -1,103 +1,116 @@
 package com.dewildte.dtxt
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.tooling.preview.Preview
-import com.dewildte.dtxt.commands.LoadSelectedFile
-import com.dewildte.dtxt.commands.NavigateBack
-import com.dewildte.dtxt.commands.NavigateToSettings
-import com.dewildte.dtxt.commands.SelectTextFile
-import com.dewildte.dtxt.content.ContentType
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import com.dewildte.dtxt.commands.Start
 import com.dewildte.dtxt.content.editor.EditorContentController
 import com.dewildte.dtxt.content.empty.EmptyContentController
-import com.dewildte.dtxt.content.empty.SelectTextFileClicked
 import com.dewildte.dtxt.content.loading.LoadingContent
 import com.dewildte.dtxt.content.settings.SettingsContentController
 import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.queries.SelectedFile
-import com.dewildte.dtxt.utils.Actor
+import com.dewildte.dtxt.queries.SelectedFileStatus
+import com.dewildte.dtxt.utils.samples.SampleText
 
 @Composable
 fun App(
-    state: AppState = rememberAppState(),
-    controller: Actor = {},
+    appContext: AppContext = rememberAppContext(),
 ) {
 
-    when (val contentType = state.contentType) {
-        ContentType.EDITOR -> {
-            when (state.fileStatus) {
-                SelectedFile.Status.LOADED -> {
-                    EditorContentController(
-                        appState = state,
-                    ) { message ->
-                        when (message) {
-                            NavigateToSettings -> {
-                                if (contentType != ContentType.SETTINGS) {
-                                    state.contentType = ContentType.SETTINGS
-                                }
-                            }
-
-                            else -> controller.tell(message)
-                        }
-                    }
-                }
-
-                SelectedFile.Status.LOADING -> {
-                    LoadingContent()
-                }
-
-                SelectedFile.Status.NOT_FOUND -> {
-                    EmptyContentController { message ->
-                        when (message) {
-                            is SelectTextFile -> {
-                                controller.tell(message)
-                            }
-                        }
-                    }
-                }
-            }
+    when (val state = appContext.state) {
+        is EditorState -> {
+            EditorContentController(
+                state = state
+            )
         }
 
-        ContentType.SETTINGS -> {
+        is EmptyState -> {
+            EmptyContentController(
+                state = state
+            )
+        }
+
+        is InitialState -> {
+            /* no-op */
+        }
+
+        is SettingsState -> {
             SettingsContentController(
-                appState = state,
-            ) { message ->
-                when (message) {
-                    NavigateBack -> {
-                        if (contentType != ContentType.EDITOR) {
-                            state.contentType = ContentType.EDITOR
-                        }
-                    }
-                }
-            }
+                state = state
+            )
         }
     }
 
-    LaunchedEffect(controller) {
-        controller.tell(LoadSelectedFile())
+    if (appContext.showLoading) {
+        LoadingContent()
+    }
+
+    LaunchedEffect(appContext) {
+        appContext.tell(Start)
     }
 }
 
-@Composable
-@Preview
-private fun AppLoadingPreview() {
-    App()
+class AppSettingsContextPreviewParameterProvider : PreviewParameterProvider<AppContext> {
+
+    val settingsContext = AppContextImpl(
+        showLoading = false,
+        state = SettingsStateImpl()
+    )
+    override val values: Sequence<AppContext>
+        get() = sequenceOf(
+            settingsContext,
+        )
+}
+
+class AppEditorContextPreviewParameterProvider : PreviewParameterProvider<AppContext> {
+
+    val editorContext = AppContextImpl(
+        fileStatus = SelectedFileStatus.LOADED,
+        showLoading = false,
+        state = EditorStateImpl(
+            textFile = TextFile(
+                path = SampleText.textFileName,
+                contents = SampleText.loremIpsum,
+            )
+        )
+    )
+    override val values: Sequence<AppContext>
+        get() = sequenceOf(
+            editorContext,
+        )
 }
 
 @Composable
 @Preview
-private fun AppLoadedPreview() {
-    val state = rememberAppState(
-        fileStatus = SelectedFile.Status.LOADED,
-        selectedFile = TextFile("Preview.txt", "Hello World!")
-    )
-    App(state = state)
+private fun LoadingPreview() {
+    App(appContext = AppContextImpl())
 }
 
 @Composable
 @Preview
 private fun AppEmptyPreview() {
-    val state = rememberAppState(
-        fileStatus = SelectedFile.Status.NOT_FOUND,
+    val appContext = AppContextImpl(
+        state = EmptyStateImpl()
     )
-    App(state = state)
+    App(appContext = appContext)
+}
+
+@Composable
+@Preview
+private fun AppEditorContextPreview(
+    @PreviewParameter(AppEditorContextPreviewParameterProvider::class)
+    appContext: AppContext
+) {
+    App(appContext = appContext)
+}
+
+@Composable
+@Preview
+private fun AppSettingsPreview(
+    @PreviewParameter(AppSettingsContextPreviewParameterProvider::class)
+    appContext: AppContext,
+) {
+    App(appContext = appContext)
 }

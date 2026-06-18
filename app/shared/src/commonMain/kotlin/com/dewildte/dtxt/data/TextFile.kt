@@ -6,4 +6,8 @@ import androidx.compose.runtime.Immutable
 data class TextFile(
     val path: String = "",
     val contents: String = "",
-)
+) {
+    companion object {
+        val EMPTY = TextFile()
+    }
+}

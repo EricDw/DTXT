@@ -20,22 +20,24 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
-import com.dewildte.dtxt.commands.LoadSelectedFile
-import com.dewildte.dtxt.commands.LogMessage
-import com.dewildte.dtxt.commands.SelectTextFile
-import com.dewildte.dtxt.commands.UpdateSelectedFileContent
-import com.dewildte.dtxt.content.ContentType
+import com.dewildte.dtxt.commands.*
 import com.dewildte.dtxt.data.LogData
 import com.dewildte.dtxt.data.LogLevel
 import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.queries.SelectedFile
+import com.dewildte.dtxt.events.FailedToLoadSelectedFile
+import com.dewildte.dtxt.events.FailedToSelectFile
+import com.dewildte.dtxt.events.FailedToUpdateFileContent
+import com.dewildte.dtxt.events.FileSelected
+import com.dewildte.dtxt.events.SystemBackButtonClicked
 import com.dewildte.dtxt.utils.Actor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity(), Actor {
 
-    private val appState: AppState = AppState()
+    private val appContext: AppContextImpl = AppContextImpl(
+        controller = this
+    )
     private val filePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         try {
             if (uri != null) {
@@ -52,24 +54,10 @@ class MainActivity : ComponentActivity(), Actor {
                 onSelectedFileUriFound(uri)
 
             } else {
-                if (appState.selectedFile.path.isNotEmpty())
-                    appState.apply {
-                        fileStatus = SelectedFile.Status.LOADED
-                    }
-                /**
-                 * Given the user has a file they were previously editing.
-                 * When they then back out of selecting a new one.
-                 * Then do nothing.
-                 */
+                appContext.tell(FailedToSelectFile())
             }
         } catch (t: Throwable) {
-            appState.apply {
-                fileStatus = SelectedFile.Status.NOT_FOUND
-                selectedFile = TextFile()
-                error = t
-            }
-
-            println(t.message)
+            appContext.tell(FailedToSelectFile(t))
         }
     }
 
@@ -88,11 +76,11 @@ class MainActivity : ComponentActivity(), Actor {
             MaterialTheme(
                 colorScheme = colorScheme,
             ) {
-                App(state = appState, controller = this@MainActivity)
+                App(appContext = appContext)
             }
 
-            BackHandler(enabled = appState.contentType != ContentType.EDITOR) {
-                appState.contentType = ContentType.EDITOR
+            BackHandler(enabled = appContext.backNavigationEnabled) {
+                appContext.tell(SystemBackButtonClicked)
             }
         }
     }
@@ -118,27 +106,18 @@ class MainActivity : ComponentActivity(), Actor {
                         getPreferences(MODE_PRIVATE).edit {
                             putString(KEY_SELECTED_FILE_URI, null)
                         }
-                        appState.apply {
-                            fileStatus = SelectedFile.Status.NOT_FOUND
-                            selectedFile = TextFile()
-                        }
+                        appContext.state.tell(FailedToLoadSelectedFile())
                     }
                 } catch (e: Throwable) {
-                    appState.apply {
-                        selectedFile = TextFile()
-                    }
-                    println(e.message)
+                    appContext.tell(FailedToSelectFile(e))
                 }
             }
 
             is SelectTextFile -> {
                 try {
-                    appState.apply {
-                        fileStatus = SelectedFile.Status.LOADING
-                    }
                     filePicker.launch(arrayOf("text/plain"))
                 } catch (e: Throwable) {
-                    println(e.message)
+                    appContext.tell(FailedToSelectFile(e))
                 }
             }
 
@@ -155,21 +134,17 @@ class MainActivity : ComponentActivity(), Actor {
                             ?.toUri()
 
                         if (uri != null) {
-
                             contentResolver.openOutputStream(uri, "wt")?.use { stream ->
                                 stream.write(message.newContent.toString().toByteArray())
                                 stream.flush()
                             }
-
                         } else {
                             getPreferences(MODE_PRIVATE).edit {
                                 putString(KEY_SELECTED_FILE_URI, null)
                             }
                         }
                     } catch (e: Throwable) {
-                        appState.apply {
-                            error = e
-                        }
+                        appContext.tell(FailedToUpdateFileContent(e))
                     }
                 }
             }
@@ -217,15 +192,13 @@ class MainActivity : ComponentActivity(), Actor {
         contentResolver.openInputStream(uri)?.use { inputStream ->
             val contents = inputStream.reader().readText()
             val path = uri.lastPathSegment?.replace("primary:", "") ?: ""
-            val textFileData = TextFile(
+            val textFile = TextFile(
                 path = path,
                 contents = contents,
             )
 
-            appState.apply {
-                fileStatus = SelectedFile.Status.LOADED
-                selectedFile = textFileData
-            }
+            appContext.state.tell(FileSelected(textFile))
+
         }
     }
 

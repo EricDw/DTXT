@@ -1,40 +1,29 @@
 package com.dewildte.dtxt
 
-import androidx.compose.runtime.*
-import com.dewildte.dtxt.content.ContentType
+import androidx.compose.runtime.Stable
 import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.queries.SelectedFile
+import com.dewildte.dtxt.utils.Actor
 
 @Stable
-class AppState(
-    fileStatus: SelectedFile.Status = SelectedFile.Status.LOADING,
-    selectedFile: TextFile = TextFile(),
-    error: Throwable? = null,
-    contentType: ContentType = ContentType.EDITOR,
-) {
-
-    var contentType: ContentType by mutableStateOf(contentType)
-
-    var error: Throwable? by mutableStateOf(error)
-
-    var fileStatus: SelectedFile.Status by mutableStateOf(fileStatus)
-
-    var selectedFile: TextFile by mutableStateOf(selectedFile)
-}
-
-@Composable
-fun rememberAppState(
-    fileStatus: SelectedFile.Status = SelectedFile.Status.LOADING,
-    selectedFile: TextFile = TextFile(),
-    error: Throwable? = null,
-    contentType: ContentType = ContentType.EDITOR,
-): AppState {
-    return remember {
-        AppState(
-            fileStatus = fileStatus,
-            selectedFile = selectedFile,
-            error = error,
-            contentType = contentType,
-        )
+sealed interface AppState: Actor {
+    override fun tell(message: Any) {
+        /* no-op */
     }
 }
+
+interface InitialState : AppState
+
+interface EmptyState : AppState
+
+interface EditorState : AppState {
+
+    val textFile: TextFile
+
+    val searchMode: Boolean
+
+    val searchTerm: String
+
+    val moreMenuExpanded: Boolean
+}
+
+interface SettingsState : AppState
