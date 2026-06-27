@@ -4,4 +4,4 @@ import com.dewildte.dtxt.AppState
 
 class TransitionToState(
     val newState: AppState
-)
+): Command

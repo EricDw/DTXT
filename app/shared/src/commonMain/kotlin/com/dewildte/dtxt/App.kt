@@ -1,7 +1,6 @@
 package com.dewildte.dtxt
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -11,7 +10,6 @@ import com.dewildte.dtxt.content.empty.EmptyContentController
 import com.dewildte.dtxt.content.loading.LoadingContent
 import com.dewildte.dtxt.content.settings.SettingsContentController
 import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.queries.SelectedFileStatus
 import com.dewildte.dtxt.utils.samples.SampleText
 
 @Composable
@@ -33,7 +31,7 @@ fun App(
         }
 
         is InitialState -> {
-            /* no-op */
+            appContext.tell(Start)
         }
 
         is SettingsState -> {
@@ -45,10 +43,6 @@ fun App(
 
     if (appContext.showLoading) {
         LoadingContent()
-    }
-
-    LaunchedEffect(appContext) {
-        appContext.tell(Start)
     }
 }
 
@@ -67,7 +61,6 @@ class AppSettingsContextPreviewParameterProvider : PreviewParameterProvider<AppC
 class AppEditorContextPreviewParameterProvider : PreviewParameterProvider<AppContext> {
 
     val editorContext = AppContextImpl(
-        fileStatus = SelectedFileStatus.LOADED,
         showLoading = false,
         state = EditorStateImpl(
             textFile = TextFile(
@@ -92,6 +85,7 @@ private fun LoadingPreview() {
 @Preview
 private fun AppEmptyPreview() {
     val appContext = AppContextImpl(
+        showLoading = false,
         state = EmptyStateImpl()
     )
     App(appContext = appContext)
@@ -99,7 +93,7 @@ private fun AppEmptyPreview() {
 
 @Composable
 @Preview
-private fun AppEditorContextPreview(
+private fun AppEditorPreview(
     @PreviewParameter(AppEditorContextPreviewParameterProvider::class)
     appContext: AppContext
 ) {

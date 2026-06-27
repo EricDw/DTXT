@@ -7,7 +7,6 @@ import com.dewildte.dtxt.commands.Start
 import com.dewildte.dtxt.commands.TransitionToState
 import com.dewildte.dtxt.content.empty.SelectTextFileClicked
 import com.dewildte.dtxt.events.FileSelected
-import com.dewildte.dtxt.queries.SelectedFileStatus
 
 @Stable
 class EmptyStateImpl : EmptyState {
@@ -33,11 +32,7 @@ class EmptyStateImpl : EmptyState {
             }
 
             is FileSelected -> {
-                appContext.apply {
-                    fileStatus = SelectedFileStatus.LOADED
-                    selectedFile = message.textFile
-
-                }.tell(
+                appContext.tell(
                     TransitionToState(
                         EditorStateImpl(
                             textFile = message.textFile

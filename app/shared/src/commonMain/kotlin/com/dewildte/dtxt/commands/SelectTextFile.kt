@@ -1,3 +1,3 @@
 package com.dewildte.dtxt.commands
 
-class SelectTextFile
+class SelectTextFile : Command

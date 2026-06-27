@@ -4,4 +4,4 @@ import com.dewildte.dtxt.MutableAppContext
 
 class SetContext(
     val context: MutableAppContext
-)
+): Command

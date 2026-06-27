@@ -1,3 +1,3 @@
 package com.dewildte.dtxt.commands
 
-class LoadSelectedFile
+class LoadSelectedFile : Command

@@ -2,7 +2,9 @@ package com.dewildte.dtxt.content.editor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.FileOpen
@@ -87,6 +89,10 @@ fun EditorContent(
                 textFlow.collect { newText ->
                     onEvent(FileTextChanged(newText.toString()))
                 }
+            }
+
+            LaunchedEffect(textFile.path) {
+                textFieldState.setTextAndPlaceCursorAtEnd(textFile.contents)
             }
         }
     }

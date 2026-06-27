@@ -1,7 +1,6 @@
 package com.dewildte.dtxt
 
 import androidx.compose.runtime.Stable
-import com.dewildte.dtxt.commands.NavigateBack
 import com.dewildte.dtxt.commands.SetContext
 import com.dewildte.dtxt.commands.Start
 import com.dewildte.dtxt.commands.TransitionToState

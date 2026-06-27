@@ -7,17 +7,16 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.dewildte.dtxt.commands.Command
 import com.dewildte.dtxt.commands.SetContext
 import com.dewildte.dtxt.commands.Start
 import com.dewildte.dtxt.commands.TransitionToState
-import com.dewildte.dtxt.data.TextFile
-import com.dewildte.dtxt.queries.SelectedFileStatus
+import com.dewildte.dtxt.events.Event
+import com.dewildte.dtxt.queries.Query
 import com.dewildte.dtxt.utils.Actor
 
 @Stable
 class AppContextImpl(
-    fileStatus: SelectedFileStatus = SelectedFileStatus.LOADING,
-    selectedFile: TextFile = TextFile.EMPTY,
     error: Throwable? = null,
     showLoading: Boolean = true,
     state: AppState = InitialStateImpl(),
@@ -26,8 +25,6 @@ class AppContextImpl(
 
     override var showLoading: Boolean by mutableStateOf(showLoading)
     override var backNavigationEnabled: Boolean by mutableStateOf(false)
-    override var fileStatus: SelectedFileStatus by mutableStateOf(fileStatus)
-    override var selectedFile: TextFile by mutableStateOf(selectedFile)
     override var error: Throwable? by mutableStateOf(error)
     override var state: AppState by mutableStateOf(state)
     override var stateStack: MutableList<AppState> = mutableStateListOf(state)
@@ -35,34 +32,50 @@ class AppContextImpl(
 
     override fun tell(message: Any) {
         when (message) {
+            is Event -> {
+                handleEvent(message)
+            }
+            is Command -> {
+                handleCommand(message)
+            }
+            is Query -> {
+                handleQuery(message)
+            }
+        }
+    }
+
+    private fun handleEvent(event: Event) {
+        state.tell(event)
+    }
+
+    private fun handleCommand(command: Command) {
+        when (command) {
             is Start -> {
                 state.tell(SetContext(this))
                 state.tell(Start)
             }
-
             is TransitionToState -> {
-                message.newState.tell(SetContext(this))
-                message.newState.tell(Start)
+                command.newState.tell(SetContext(this))
+                command.newState.tell(Start)
             }
-
-            else -> state.tell(message)
+            else -> state.tell(command)
         }
+    }
+
+    private fun handleQuery(query: Query) {
+        state.tell(query)
     }
 
 }
 
 @Composable
 fun rememberAppContext(
-    fileStatus: SelectedFileStatus = SelectedFileStatus.LOADING,
-    selectedFile: TextFile = TextFile.EMPTY,
     error: Throwable? = null,
     state: AppState = InitialStateImpl(),
     controller: Actor = {}
 ): AppContextImpl {
     return remember {
         AppContextImpl(
-            fileStatus = fileStatus,
-            selectedFile = selectedFile,
             error = error,
             state = state,
             controller = controller,

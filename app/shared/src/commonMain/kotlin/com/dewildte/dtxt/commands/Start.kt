@@ -1,3 +1,3 @@
 package com.dewildte.dtxt.commands
 
-object Start
+object Start: Command

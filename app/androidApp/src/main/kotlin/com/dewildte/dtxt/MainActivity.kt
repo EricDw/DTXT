@@ -38,7 +38,9 @@ class MainActivity : ComponentActivity(), Actor {
     private val appContext: AppContextImpl = AppContextImpl(
         controller = this
     )
-    private val filePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    private val filePicker = registerForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
         try {
             if (uri != null) {
                 Log.d(TAG, "Uri:\n$uri")
@@ -56,8 +58,8 @@ class MainActivity : ComponentActivity(), Actor {
             } else {
                 appContext.tell(FailedToSelectFile())
             }
-        } catch (t: Throwable) {
-            appContext.tell(FailedToSelectFile(t))
+        } catch (cause: Throwable) {
+            appContext.tell(FailedToSelectFile(cause))
         }
     }
 
@@ -66,11 +68,10 @@ class MainActivity : ComponentActivity(), Actor {
         super.onCreate(savedInstanceState)
 
         setContent {
-
             val colorScheme = if (isSystemInDarkTheme()) {
-                dynamicDarkColorScheme(LocalContext.current)
+                dynamicDarkColorScheme(this@MainActivity)
             } else {
-                dynamicLightColorScheme(LocalContext.current)
+                dynamicLightColorScheme(this@MainActivity)
             }
 
             MaterialTheme(
@@ -108,8 +109,8 @@ class MainActivity : ComponentActivity(), Actor {
                         }
                         appContext.state.tell(FailedToLoadSelectedFile())
                     }
-                } catch (e: Throwable) {
-                    appContext.tell(FailedToSelectFile(e))
+                } catch (cause: Throwable) {
+                    appContext.tell(FailedToSelectFile(cause))
                 }
             }
 
@@ -123,7 +124,13 @@ class MainActivity : ComponentActivity(), Actor {
 
             is UpdateSelectedFileContent -> {
                 lifecycleScope.launch(Dispatchers.IO) {
-                    Log.d(TAG, message.newContent.toString())
+                    logMessage(
+                        LogData(
+                            level = LogLevel.DEBUG,
+                            tag = TAG,
+                            message = message.newContent.toString()
+                        )
+                    )
                     try {
 
                         val uri = getPreferences(MODE_PRIVATE)
@@ -143,13 +150,21 @@ class MainActivity : ComponentActivity(), Actor {
                                 putString(KEY_SELECTED_FILE_URI, null)
                             }
                         }
-                    } catch (e: Throwable) {
-                        appContext.tell(FailedToUpdateFileContent(e))
+                    } catch (cause: Throwable) {
+                        appContext.tell(FailedToUpdateFileContent(cause))
                     }
                 }
             }
 
-            else -> println(message)
+            else -> {
+                logMessage(
+                    LogData(
+                        level = LogLevel.DEBUG,
+                        tag = TAG,
+                        message = "MESSAGE: $message"
+                    )
+                )
+            }
         }
 
     }

@@ -8,6 +8,7 @@ import com.dewildte.dtxt.commands.*
 import com.dewildte.dtxt.content.editor.*
 import com.dewildte.dtxt.data.TextFile
 import com.dewildte.dtxt.events.FailedToUpdateFileContent
+import com.dewildte.dtxt.events.FileSelected
 
 @Stable
 class EditorStateImpl(
@@ -38,7 +39,7 @@ class EditorStateImpl(
 
             is Start -> {
                 appContext.apply {
-                    backNavigationEnabled = previousState !is EmptyState
+                    backNavigationEnabled = false
                     state = this@EditorStateImpl
                     showLoading = false
                 }
@@ -83,6 +84,10 @@ class EditorStateImpl(
                     appContext.controller.tell(UpdateSelectedFileContent(newText))
                     textFile = textFile.copy(contents = newText)
                 }
+            }
+
+            is FileSelected -> {
+                textFile = message.textFile
             }
 
             is FailedToUpdateFileContent -> {
