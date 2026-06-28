@@ -1,64 +1,62 @@
 package com.dewildte.dtxt.content.settings
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import dtxt.app.shared.generated.resources.Res
-import dtxt.app.shared.generated.resources.desc_navigate_back
-import dtxt.app.shared.generated.resources.label_settings
-import dtxt.app.shared.generated.resources.title_settings
-import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.unit.dp
+import com.dewildte.dtxt.SettingsState
+import com.dewildte.dtxt.events.Event
+import com.dewildte.dtxt.events.SnippetClicked
 
 @Composable
 fun SettingsContent(
     modifier: Modifier = Modifier,
-    onEvent: (SettingsContentEvent) -> Unit = {}
+    snippets: List<String> = emptyList(),
+    onEvent: (Event) -> Unit = {}
 ) {
-    Scaffold(
+    LazyColumn(
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(Res.string.title_settings),
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        onEvent(BackClicked)
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                            contentDescription = stringResource(Res.string.desc_navigate_back),
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        Box(
-            Modifier.padding(innerPadding).fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("🏗️ Under Construction", style = MaterialTheme.typography.displaySmall)
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        stickyHeader {
+            Text("Snippets")
+        }
+        items(items = snippets, key = { snippet -> snippet }) { snippet ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    onEvent(SnippetClicked(snippet))
+                }
+            ) { Text(modifier = Modifier.padding(16.dp), text = snippet) }
         }
     }
 }
 
 @Composable
+fun SettingsContent(
+    state: SettingsState,
+    modifier: Modifier = Modifier
+) {
+    SettingsContent(
+        modifier = modifier,
+        snippets = state.snippets,
+        onEvent = state::tell
+    )
+}
+
+@Composable
 @Preview
 private fun SettingsContentPreview() {
-    SettingsContent()
+    val snippets = (0..10).map { index ->
+        "Snippet $index"
+    }
+    SettingsContent(
+        snippets = snippets
+    )
 }

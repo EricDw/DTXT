@@ -18,12 +18,19 @@ interface EmptyState : AppState
 interface EditorState : AppState {
 
     val textFile: TextFile
-
     val searchMode: Boolean
 
     val searchTerm: String
 
     val moreMenuExpanded: Boolean
+
+    val snippetSelectorExpanded: Boolean
+    val snippetSelectorIsEmpty: Boolean
+    val snippetToInsert: String?
+
+    val snippets: List<String>
 }
 
-interface SettingsState : AppState
+interface SettingsState : AppState {
+    val snippets: List<String>
+}

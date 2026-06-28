@@ -15,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -25,20 +24,25 @@ import com.dewildte.dtxt.data.LogData
 import com.dewildte.dtxt.data.LogLevel
 import com.dewildte.dtxt.data.TextFile
 import com.dewildte.dtxt.events.FailedToLoadSelectedFile
+import com.dewildte.dtxt.events.FailedToLoadSelectedSnippetsFile
 import com.dewildte.dtxt.events.FailedToSelectFile
+import com.dewildte.dtxt.events.FailedToSelectSnippetsFile
 import com.dewildte.dtxt.events.FailedToUpdateFileContent
 import com.dewildte.dtxt.events.FileSelected
+import com.dewildte.dtxt.events.SnippetsFileSelected
 import com.dewildte.dtxt.events.SystemBackButtonClicked
+import com.dewildte.dtxt.queries.GetCurrentDateString
 import com.dewildte.dtxt.utils.Actor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
 class MainActivity : ComponentActivity(), Actor {
 
     private val appContext: AppContextImpl = AppContextImpl(
         controller = this
     )
-    private val filePicker = registerForActivityResult(
+    private val fileSelector = registerForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         try {
@@ -60,6 +64,31 @@ class MainActivity : ComponentActivity(), Actor {
             }
         } catch (cause: Throwable) {
             appContext.tell(FailedToSelectFile(cause))
+        }
+    }
+
+    private val snippetsFileSelector = registerForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        try {
+            if (uri != null) {
+                Log.d(TAG, "Uri:\n$uri")
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+
+                getPreferences(MODE_PRIVATE).edit {
+                    putString(KEY_SELECTED_SNIPPETS_FILE_URI, uri.toString())
+                }
+
+                onSelectedSnippetsFileUriFound(uri)
+
+            } else {
+                appContext.tell(FailedToSelectSnippetsFile())
+            }
+        } catch (cause: Throwable) {
+            appContext.tell(FailedToSelectSnippetsFile(cause))
         }
     }
 
@@ -86,6 +115,12 @@ class MainActivity : ComponentActivity(), Actor {
         }
     }
 
+    override fun onNewIntent(intent: Intent, caller: ComponentCaller) {
+        super.onNewIntent(intent, caller)
+        val selectedText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString() ?: ""
+        Log.d(TAG, selectedText)
+    }
+
     override fun tell(message: Any) {
         when (message) {
             is LogMessage -> {
@@ -107,18 +142,48 @@ class MainActivity : ComponentActivity(), Actor {
                         getPreferences(MODE_PRIVATE).edit {
                             putString(KEY_SELECTED_FILE_URI, null)
                         }
-                        appContext.state.tell(FailedToLoadSelectedFile())
+                        appContext.tell(FailedToLoadSelectedFile())
                     }
                 } catch (cause: Throwable) {
-                    appContext.tell(FailedToSelectFile(cause))
+                    appContext.tell(FailedToLoadSelectedFile(cause))
                 }
             }
 
             is SelectTextFile -> {
                 try {
-                    filePicker.launch(arrayOf("text/plain"))
-                } catch (e: Throwable) {
-                    appContext.tell(FailedToSelectFile(e))
+                    fileSelector.launch(arrayOf("text/plain"))
+                } catch (cause: Throwable) {
+                    appContext.tell(FailedToSelectFile(cause))
+                }
+            }
+
+            is SelectSnippetsFile -> {
+                try {
+                    snippetsFileSelector.launch(arrayOf("text/plain"))
+                } catch (cause: Throwable) {
+                    appContext.tell(FailedToSelectSnippetsFile(cause))
+                }
+            }
+
+            is LoadSnippetsFile -> {
+                try {
+                    val uri = getPreferences(MODE_PRIVATE)
+                        .getString(
+                            KEY_SELECTED_SNIPPETS_FILE_URI,
+                            null
+                        )
+                        ?.toUri()
+
+                    if (uri != null) {
+                        onSelectedSnippetsFileUriFound(uri)
+                    } else {
+                        getPreferences(MODE_PRIVATE).edit {
+                            putString(KEY_SELECTED_SNIPPETS_FILE_URI, null)
+                        }
+                        appContext.tell(FailedToLoadSelectedSnippetsFile())
+                    }
+                } catch (cause: Throwable) {
+                    appContext.tell(FailedToLoadSelectedSnippetsFile(cause))
                 }
             }
 
@@ -156,6 +221,11 @@ class MainActivity : ComponentActivity(), Actor {
                 }
             }
 
+            is GetCurrentDateString -> {
+                val date = LocalDateTime.now().toLocalDate().toString()
+                message.onResult(date)
+            }
+
             else -> {
                 logMessage(
                     LogData(
@@ -172,35 +242,29 @@ class MainActivity : ComponentActivity(), Actor {
     private fun logMessage(message: LogData) {
         when (message.level) {
             LogLevel.VERBOSE -> {
-                Log.v(TAG, message.message, message.error)
+                Log.v(message.tag, message.message, message.error)
             }
 
             LogLevel.DEBUG -> {
-                Log.d(TAG, message.message, message.error)
+                Log.d(message.tag, message.message, message.error)
             }
 
             LogLevel.INFO -> {
-                Log.i(TAG, message.message, message.error)
+                Log.i(message.tag, message.message, message.error)
             }
 
             LogLevel.WARN -> {
-                Log.w(TAG, message.message, message.error)
+                Log.w(message.tag, message.message, message.error)
             }
 
             LogLevel.ERROR -> {
-                Log.e(TAG, message.message, message.error)
+                Log.e(message.tag, message.message, message.error)
             }
 
             LogLevel.WTF -> {
-                Log.wtf(TAG, message.message, message.error)
+                Log.wtf(message.tag, message.message, message.error)
             }
         }
-    }
-
-    override fun onNewIntent(intent: Intent, caller: ComponentCaller) {
-        super.onNewIntent(intent, caller)
-        val selectedText = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString() ?: ""
-        Log.d(TAG, selectedText)
     }
 
     private fun onSelectedFileUriFound(uri: Uri) {
@@ -213,13 +277,26 @@ class MainActivity : ComponentActivity(), Actor {
             )
 
             appContext.state.tell(FileSelected(textFile))
+        }
+    }
 
+    private fun onSelectedSnippetsFileUriFound(uri: Uri) {
+        contentResolver.openInputStream(uri)?.use { inputStream ->
+            val contents = inputStream.reader().readText()
+            val path = uri.lastPathSegment?.replace("primary:", "") ?: ""
+            val textFile = TextFile(
+                path = path,
+                contents = contents,
+            )
+
+            appContext.state.tell(SnippetsFileSelected(textFile))
         }
     }
 
     companion object {
         private const val TAG = "MainActivity"
         private const val KEY_SELECTED_FILE_URI = "key_selected_file_uri"
+        private const val KEY_SELECTED_SNIPPETS_FILE_URI = "key_selected_snippets_file_uri"
     }
 }
 

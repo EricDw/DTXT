@@ -10,23 +10,23 @@ import com.dewildte.dtxt.events.FileSelected
 
 @Stable
 class InitialStateImpl : InitialState {
-    private lateinit var appContext: MutableAppContext
+    private lateinit var context: MutableAppContext
 
     override fun tell(message: Any) {
         when (message) {
             is SetContext -> {
-                appContext = message.context
+                context = message.context
             }
 
             is Start -> {
-                appContext.run {
+                context.run {
                     showLoading = true
                     controller.tell(LoadSelectedFile())
                 }
             }
 
             is FileSelected -> {
-                appContext.tell(
+                context.tell(
                     TransitionToState(
                         EditorStateImpl(
                             textFile = message.textFile
@@ -36,7 +36,7 @@ class InitialStateImpl : InitialState {
             }
 
             is FailedToLoadSelectedFile -> {
-                tell(
+                context.tell(
                     TransitionToState(
                         EmptyStateImpl()
                     )

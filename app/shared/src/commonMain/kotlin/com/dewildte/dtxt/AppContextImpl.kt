@@ -14,6 +14,7 @@ import com.dewildte.dtxt.commands.TransitionToState
 import com.dewildte.dtxt.events.Event
 import com.dewildte.dtxt.queries.Query
 import com.dewildte.dtxt.utils.Actor
+import com.dewildte.dtxt.utils.tellDebugLog
 
 @Stable
 class AppContextImpl(
@@ -55,6 +56,10 @@ class AppContextImpl(
                 state.tell(Start)
             }
             is TransitionToState -> {
+                controller.tellDebugLog(
+                    tag = TAG,
+                    message = "$command"
+                )
                 command.newState.tell(SetContext(this))
                 command.newState.tell(Start)
             }
@@ -64,6 +69,10 @@ class AppContextImpl(
 
     private fun handleQuery(query: Query) {
         state.tell(query)
+    }
+
+    companion object {
+        private const val TAG = "AppContext"
     }
 
 }

@@ -5,12 +5,14 @@
 
     <!--  Labels  -->
     <string name="label_select_file">Select new file</string>
+    <string name="label_select_snippets_file">Select snippets file</string>
     <string name="label_insert_snippet">Insert snippet</string>
     <string name="label_find_in_page">Find in page</string>
     <string name="label_settings">Settings</string>
 
     <!--  Content Descriptions  -->
     <string name="desc_select_file">Select new file</string>
+    <string name="desc_select_snippets_file">Select snippets file</string>
     <string name="desc_insert_snippet">Insert snippet</string>
     <string name="desc_find_in_page">Find in page</string>
     <string name="desc_settings">Settings</string>

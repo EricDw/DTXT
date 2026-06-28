@@ -4,5 +4,5 @@ data class LogData(
     val level: LogLevel,
     val tag: String,
     val message: String,
-    val error: Error? = null,
+    val error: Throwable? = null,
 )

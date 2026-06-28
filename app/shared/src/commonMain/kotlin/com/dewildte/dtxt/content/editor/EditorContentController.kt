@@ -15,7 +15,6 @@ fun EditorContentController(
             textFile = textFile,
             searchMode = searchMode,
             searchTerm = searchTerm,
-            moreMenuExpanded = moreMenuExpanded,
             onEvent = state::tell
         )
     }

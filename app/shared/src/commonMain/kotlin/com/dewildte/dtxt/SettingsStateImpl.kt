@@ -1,33 +1,54 @@
 package com.dewildte.dtxt
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateListOf
+import com.dewildte.dtxt.commands.LoadSnippetsFile
 import com.dewildte.dtxt.commands.SetContext
 import com.dewildte.dtxt.commands.Start
 import com.dewildte.dtxt.commands.TransitionToState
-import com.dewildte.dtxt.content.settings.BackClicked
+import com.dewildte.dtxt.data.TextFile
+import com.dewildte.dtxt.events.BackClicked
+import com.dewildte.dtxt.events.SnippetsFileLoaded
 import com.dewildte.dtxt.events.SystemBackButtonClicked
 
 @Stable
-class SettingsStateImpl : SettingsState {
+class SettingsStateImpl(
+    snippets: List<String> = emptyList()
+) : SettingsState {
 
-    private lateinit var appContext: MutableAppContext
+    private lateinit var context: MutableAppContext
     private lateinit var previousState: AppState
+
+    override var snippets: List<String> = mutableStateListOf(*snippets.toTypedArray())
 
     override fun tell(message: Any) {
         when (message) {
             is SetContext -> {
                 previousState = message.context.state
-                appContext = message.context
+                context = message.context
             }
+
             is Start -> {
-                appContext.backNavigationEnabled = previousState != this
-                appContext.state = this
+                context.backNavigationEnabled = previousState != this
+                context.state = this
+
+                context.controller.tell(LoadSnippetsFile)
+            }
+
+            is SnippetsFileLoaded -> {
+                // TODO: Parse the Snippets out of the file.
+                parseSnippets(message.file)
             }
 
             is BackClicked, is SystemBackButtonClicked -> {
-                appContext.tell(TransitionToState(previousState))
+                context.tell(TransitionToState(previousState))
             }
 
         }
+    }
+
+    private fun parseSnippets(file: TextFile) {
+        // TODO: Extract Snippets
+        // TODO: Set the snippets data
     }
 }
